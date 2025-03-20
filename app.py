@@ -85,7 +85,7 @@ class MarketAPI:
         return data
 
     def fetch_data_for_date(self, date, state=None, district=None, commodity=None):
-        """Fetch market data for a specific date"""
+        """Fetch market data for a specific date and store in database"""
         try:
             logger.info(f"Fetching market data for date: {date}")
             params = {
@@ -125,10 +125,15 @@ class MarketAPI:
             data = response.json()
 
             if data and 'records' in data:
-                # Transform records - divide prices by 100 to get per kg prices
+                # Transform records and store in database
                 transformed_records = []
                 for index, record in enumerate(data['records']):
                     try:
+                        # Parse the date to ensure consistent format
+                        arrival_date = datetime.strptime(record['Arrival_Date'], '%d/%m/%Y')
+                        formatted_date = arrival_date.strftime('%d/%m/%Y')
+                        
+                        # Create transformed record
                         transformed_record = {
                             'id': index,
                             'state': record.get('State', ''),
@@ -137,25 +142,58 @@ class MarketAPI:
                             'commodity': record.get('Commodity', ''),
                             'variety': record.get('Variety', ''),
                             'grade': record.get('Grade', ''),
-                            'arrival_date': datetime.strptime(record['Arrival_Date'], '%d/%m/%Y').strftime('%Y-%m-%d'),
+                            'arrival_date': arrival_date.strftime('%Y-%m-%d'),
                             'min_price': float(record.get('Min_Price', 0)),
                             'max_price': float(record.get('Max_Price', 0)),
                             'modal_price': float(record.get('Modal_Price', 0)),
                             'min_price_per_kg': float(record.get('Min_Price', 0)) / 100.0,
                             'max_price_per_kg': float(record.get('Max_Price', 0)) / 100.0,
                             'modal_price_per_kg': float(record.get('Modal_Price', 0)) / 100.0,
-                            'price_per_kg': float(record.get('Modal_Price', 0)) / 100.0,  # Added for consistency
+                            'price_per_kg': float(record.get('Modal_Price', 0)) / 100.0,
                             'commodity_code': record.get('Commodity_Code', ''),
-                            'date': record.get('Arrival_Date', ''),
-                            'price_change': 0  # Default value, will be calculated later
+                            'date': formatted_date,
+                            'price_change': 0
                         }
                         transformed_records.append(transformed_record)
+                        
+                        # Store in database - check if record already exists
+                        existing_record = MarketData.query.filter_by(
+                            commodity=transformed_record['commodity'],
+                            market=transformed_record['market'],
+                            date=formatted_date,
+                            state=transformed_record['state'],
+                            district=transformed_record['district']
+                        ).first()
+                        
+                        if not existing_record:
+                            # Create new record
+                            new_record = MarketData(
+                                commodity=transformed_record['commodity'],
+                                market=transformed_record['market'],
+                                price=transformed_record['price_per_kg'],
+                                date=formatted_date,
+                                state=transformed_record['state'],
+                                district=transformed_record['district']
+                            )
+                            db.session.add(new_record)
+                        else:
+                            # Update existing record if price has changed
+                            if existing_record.price != transformed_record['price_per_kg']:
+                                existing_record.price = transformed_record['price_per_kg']
+                
                     except (KeyError, ValueError) as e:
                         logger.warning(f"Error transforming record: {str(e)}")
                         continue
-                
+            
+                # Commit all database changes
+                try:
+                    db.session.commit()
+                    logger.info(f"Successfully stored {len(transformed_records)} records in database")
+                except Exception as e:
+                    db.session.rollback()
+                    logger.error(f"Database error: {str(e)}")
+            
                 data['records'] = transformed_records
-                logger.info(f"Successfully fetched {len(transformed_records)} records for date {date}")
                 return data
             else:
                 logger.warning(f"No records found for date {date}")
@@ -167,6 +205,27 @@ class MarketAPI:
         except Exception as e:
             logger.error(f"Unexpected error: {str(e)}")
             return {'records': [], 'total': 0, 'error': str(e)}
+
+def cleanup_old_market_data():
+    """Remove market data older than 30 days to keep database size manageable"""
+    try:
+        thirty_days_ago = (datetime.now() - timedelta(days=30)).strftime('%d/%m/%Y')
+        old_records = MarketData.query.filter(
+            MarketData.date < thirty_days_ago
+        ).all()
+        
+        if old_records:
+            for record in old_records:
+                db.session.delete(record)
+            
+            db.session.commit()
+            logger.info(f"Removed {len(old_records)} old market data records")
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error cleaning up old market data: {str(e)}")
+
+# Call this function periodically, e.g., once a day
+# You could add a route for this or call it from a scheduled task
 
 # Routes
 @app.route('/')
@@ -225,38 +284,39 @@ def logout():
 @login_required
 def dashboard():
     try:
-        api = MarketAPI()
-        data = api.fetch_market_data(state='Tamil Nadu', district='Salem')
+        # First check if we have recent data in the database
+        today = datetime.now().strftime('%Y-%m-%d')
+        yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
         
-        dashboard_data = []
-        if data and 'records' in data:
-            # Calculate price changes
-            commodities = {}
-            for record in data['records']:
-                commodity = record['commodity']
-                if commodity not in commodities:
-                    commodities[commodity] = []
-                commodities[commodity].append(record)
+        # Try to get data from database first
+        market_data = MarketData.query.filter(
+            MarketData.state == 'Tamil Nadu',
+            MarketData.district == 'Salem',
+            (MarketData.date == today) | (MarketData.date == yesterday)
+        ).all()
+        
+        # If no recent data in database, fetch from API
+        if not market_data:
+            api = MarketAPI()
+            data = api.fetch_market_data(state='Tamil Nadu', district='Salem')
+            # The API method will now store data in the database
             
-            # Sort by date and calculate price changes
-            for commodity, records in commodities.items():
-                sorted_records = sorted(records, key=lambda x: x['arrival_date'])
-                
-                for i, record in enumerate(sorted_records):
-                    price_change = 0
-                    if i > 0:
-                        prev_price = sorted_records[i-1]['price_per_kg']
-                        curr_price = record['price_per_kg']
-                        if prev_price > 0:
-                            price_change = ((curr_price - prev_price) / prev_price) * 100
-                    
-                    dashboard_data.append({
-                        'commodity': record['commodity'],
-                        'market': record['market'],
-                        'price_per_kg': record['price_per_kg'],
-                        'price_change': round(price_change, 2),
-                        'date': record['date']
-                    })
+            # Refresh market data from database
+            market_data = MarketData.query.filter(
+                MarketData.state == 'Tamil Nadu',
+                MarketData.district == 'Salem'
+            ).order_by(MarketData.date.desc()).all()
+        
+        # Convert database objects to dictionaries for the template
+        dashboard_data = []
+        for data in market_data:
+            dashboard_data.append({
+                'commodity': data.commodity,
+                'market': data.market,
+                'price_per_kg': float(data.price),
+                'date': data.date,
+                'price_change': 0  # Calculate this as needed
+            })
         
         # Calculate statistics
         stats = {
@@ -266,8 +326,6 @@ def dashboard():
             'min_price': min((d['price_per_kg'] for d in dashboard_data), default=0),
             'commodities_count': len(set(d['commodity'] for d in dashboard_data))
         }
-        
-        logger.info(f"Dashboard data: {len(dashboard_data)} records, {stats['commodities_count']} commodities")
         
     except Exception as e:
         logger.error(f"Error in dashboard: {str(e)}")
