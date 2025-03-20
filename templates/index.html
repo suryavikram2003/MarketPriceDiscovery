@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+    <div class="hero-content">
+        <h1>Agricultural Market Price Discovery</h1>
+        <p>Real-time market prices for agricultural commodities in Tamil Nadu</p>
+        <div class="hero-buttons">
+            <a href="{{ url_for('dashboard') }}" class="btn btn-primary">
+                <i class="fas fa-chart-line"></i> View Dashboard
+            </a>
+            <a href="{{ url_for('market_analysis') }}" class="btn btn-secondary">
+                <i class="fas fa-chart-bar"></i> Market Analysis
+            </a>
+        </div>
+    </div>
+    <div class="hero-image">
+        <img src="{{ url_for('static', filename='images/agriculture.jpg') }}" alt="Agriculture">
+    </div>
+</div>
+
+<div class="features-section">
+    <div class="section-header">
+        <h2>Key Features</h2>
+        <p>Discover the power of real-time agricultural market data</p>
+    </div>
+    
+    <div class="features-grid">
+        <div class="feature-card">
+            <div class="feature-icon">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <h3>Real-time Prices</h3>
+            <p>Access up-to-date market prices directly from government data sources</p>
+        </div>
+        
+        <div class="feature-card">
+            <div class="feature-icon">
+                <i class="fas fa-chart-bar"></i>
+            </div>
+            <h3>Market Analysis</h3>
+            <p>Analyze price trends and market patterns with interactive visualizations</p>
+        </div>
+        
+        <div class="feature-card">
+            <div class="feature-icon">
+                <i class="fas fa-file-alt"></i>
+            </div>
+            <h3>Comprehensive Reports</h3>
+            <p>Generate detailed reports on market data for better decision making</p>
+        </div>
+        
+        <div class="feature-card">
+            <div class="feature-icon">
+                <i class="fas fa-search"></i>
+            </div>
+            <h3>Search & Filter</h3>
+            <p>Find specific commodities and markets with powerful search capabilities</p>
+        </div>
+    </div>
+</div>
+
+<div class="commodities-section">
+    <div class="section-header">
+        <h2>Popular Commodities</h2>
+        <p>Track prices for these commonly traded agricultural products</p>
+    </div>
+    
+    <div class="commodities-grid">
+        <div class="commodity-card">
+            <img src="{{ url_for('static', filename='images/rice.jpg') }}" alt="Rice">
+            <div class="commodity-info">
+                <h3>Rice</h3>
+                <p>Track various varieties of rice prices across markets</p>
+            </div>
+        </div>
+        
+        <div class="commodity-card">
+            <img src="{{ url_for('static', filename='images/wheat.jpg') }}" alt="Wheat">
+            <div class="commodity-info">
+                <h3>Wheat</h3>
+                <p>Monitor wheat prices and market trends</p>
+            </div>
+        </div>
+        
+        <div class="commodity-card">
+            <img src="{{ url_for('static', filename='images/tomato.jpg') }}" alt="Tomato">
+            <div class="commodity-info">
+                <h3>Tomato</h3>
+                <p>Stay updated with tomato price fluctuations</p>
+            </div>
+        </div>
+        
+        <div class="commodity-card">
+            <img src="{{ url_for('static', filename='images/onion.jpg') }}" alt="Onion">
+            <div class="commodity-info">
+                <h3>Onion</h3>
+                <p>Track onion prices across different markets</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="cta-section">
+    <div class="cta-content">
+        <h2>Start Tracking Market Prices Today</h2>
+        <p>Join our platform to access real-time agricultural market data and make informed decisions</p>
+        {% if current_user.is_authenticated %}
+            <a href="{{ url_for('dashboard') }}" class="btn btn-primary">Go to Dashboard</a>
+        {% else %}
+            <div class="cta-buttons">
+                <a href="{{ url_for('login') }}" class="btn btn-primary">Login</a>
+                <a href="{{ url_for('register') }}" class="btn btn-secondary">Register</a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="markets-section">
+    <div class="section-header">
+        <h2>Featured Markets</h2>
+        <p>Explore price data from these key agricultural markets</p>
+    </div>
+    
+    <div class="markets-grid">
+        <div class="market-card">
+            <div class="market-icon">
+                <i class="fas fa-store"></i>
+            </div>
+            <h3>Salem Market</h3>
+            <p>One of the largest agricultural markets in Tamil Nadu</p>
+        </div>
+        
+        <div class="market-card">
+            <div class="market-icon">
+                <i class="fas fa-store"></i>
+            </div>
+            <h3>Coimbatore Market</h3>
+            <p>Major trading hub for various agricultural commodities</p>
+        </div>
+        
+        <div class="market-card">
+            <div class="market-icon">
+                <i class="fas fa-store"></i>
+            </div>
+            <h3>Chennai Market</h3>
+            <p>Central market with extensive variety of products</p>
+        </div>
+        
+        <div class="market-card">
+            <div class="market-icon">
+                <i class="fas fa-store"></i>
+            </div>
+            <h3>Madurai Market</h3>
+            <p>Traditional market with competitive pricing</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

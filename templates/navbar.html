@@ -1,0 +1,35 @@
+<nav class="main-nav">
+    <div class="nav-brand">
+        <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Market Connect" class="nav-logo">
+        <span>Market Connect</span>
+    </div>
+    
+    <div class="nav-links">
+        <a href="{{ url_for('index') }}" class="nav-item {{ 'active' if request.endpoint == 'index' }}">
+            <i class="fas fa-home"></i> Home
+        </a>
+        <a href="{{ url_for('dashboard') }}" class="nav-item {{ 'active' if request.endpoint == 'dashboard' }}">
+            <i class="fas fa-chart-line"></i> Dashboard
+        </a>
+        <a href="{{ url_for('market_analysis') }}" class="nav-item {{ 'active' if request.endpoint == 'market_analysis' }}">
+            <i class="fas fa-analytics"></i> Analysis
+        </a>
+        <a href="{{ url_for('price_trends') }}" class="nav-item {{ 'active' if request.endpoint == 'price_trends' }}">
+            <i class="fas fa-chart-bar"></i> Trends
+        </a>
+        <a href="{{ url_for('reports') }}" class="nav-item {{ 'active' if request.endpoint == 'reports' }}">
+            <i class="fas fa-file-alt"></i> Reports
+        </a>
+    </div>
+    
+    <div class="nav-user">
+        {% if current_user.is_authenticated %}
+            <span class="username">{{ current_user.username }}</span>
+            <a href="{{ url_for('logout') }}" class="logout-btn">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </a>
+        {% else %}
+            <a href="{{ url_for('login') }}" class="login-btn">Login</a>
+        {% endif %}
+    </div>
+</nav>

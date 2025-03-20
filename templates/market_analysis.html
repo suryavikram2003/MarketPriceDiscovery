@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}Market Analysis{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Market Analysis</h1>
+    <p>Detailed analysis of commodity prices and market trends</p>
+</div>
+
+<div class="analysis-summary">
+    <div class="summary-card">
+        <div class="summary-icon">
+            <i class="fas fa-store"></i>
+        </div>
+        <div class="summary-content">
+            <h3>Total Markets</h3>
+            <p class="summary-value">{{ total_markets }}</p>
+        </div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-icon">
+            <i class="fas fa-shopping-basket"></i>
+        </div>
+        <div class="summary-content">
+            <h3>Total Commodities</h3>
+            <p class="summary-value">{{ commodity_stats|length }}</p>
+        </div>
+    </div>
+</div>
+
+<div class="commodity-analysis">
+    {% for stat in commodity_stats %}
+    <div class="analysis-card">
+        <div class="analysis-header">
+            <h3>{{ stat.name }}</h3>
+            <span class="market-badge">{{ stat.market_count }} Markets</span>
+        </div>
+        <div class="analysis-stats">
+            <div class="stat-item">
+                <span class="stat-label">Average Price</span>
+                <span class="stat-value">₹{{ "%.2f"|format(stat.avg_price) }}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Min Price</span>
+                <span class="stat-value">₹{{ "%.2f"|format(stat.min_price) }}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Max Price</span>
+                <span class="stat-value">₹{{ "%.2f"|format(stat.max_price) }}</span>
+            </div>
+        </div>
+        <div class="analysis-chart">
+            <canvas id="chart-{{ loop.index }}"></canvas>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+const commodityStats = JSON.parse('{{ comodity_stats|default([])|tojson|safe }}');
+
+    
+    commodityStats.forEach((stat, index) => {
+        const chartId = `chart-${index + 1}`;
+        const chartElement = document.getElementById(chartId);
+        
+        if (chartElement && Array.isArray(stat.price_trend) && stat.price_trend.length > 0) {
+            new Chart(chartElement.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: Array.from({length: stat.price_trend.length}, (_, i) => i + 1),
+                    datasets: [{
+                        label: 'Price Trend',
+                        data: stat.price_trend,
+                        borderColor: '#3498db',
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `₹${context.parsed.y.toFixed(2)}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            ticks: {
+                                callback: function(value) {
+                                    return '₹' + value;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    });
+});
+</script>
+{% endblock %}

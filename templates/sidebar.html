@@ -1,0 +1,56 @@
+<div class="sidebar">
+    <div class="sidebar-header">
+        <div class="brand">
+            <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo" class="logo">
+            <h3>Market Connect</h3>
+        </div>
+        <div class="user-info">
+            <span>{{ current_user.username }}</span>
+        </div>
+    </div>
+    
+    <nav class="sidebar-nav">
+        <div class="nav-section">
+            <h4>Main Menu</h4>
+            <a href="{{ url_for('index') }}" class="nav-item {{ 'active' if request.endpoint == 'index' }}">
+                <i class="fas fa-home"></i>
+                <span>Home</span>
+            </a>
+            <a href="{{ url_for('dashboard') }}" class="nav-item {{ 'active' if request.endpoint == 'dashboard' }}">
+                <i class="fas fa-tachometer-alt"></i>
+                <span>Dashboard</span>
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <h4>Market Data</h4>
+            <a href="{{ url_for('market_analysis') }}" class="nav-item {{ 'active' if request.endpoint == 'market_analysis' }}">
+                <i class="fas fa-chart-line"></i>
+                <span>Market Analysis</span>
+            </a>
+            <a href="{{ url_for('price_trends') }}" class="nav-item {{ 'active' if request.endpoint == 'price_trends' }}">
+                <i class="fas fa-chart-bar"></i>
+                <span>Price Trends</span>
+            </a>
+            <a href="{{ url_for('reports') }}" class="nav-item {{ 'active' if request.endpoint == 'reports' }}">
+                <i class="fas fa-file-alt"></i>
+                <span>Reports</span>
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <h4>Management</h4>
+            <a href="{{ url_for('add_market_data') }}" class="nav-item {{ 'active' if request.endpoint == 'add_market_data' }}">
+                <i class="fas fa-plus-circle"></i>
+                <span>Add Market Data</span>
+            </a>
+        </div>
+    </nav>
+
+    <div class="sidebar-footer">
+        <a href="{{ url_for('logout') }}" class="logout-btn">
+            <i class="fas fa-sign-out-alt"></i>
+            <span>Logout</span>
+        </a>
+    </div>
+</div>

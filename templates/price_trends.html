@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block title %}Price Trends{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Price Trends</h1>
+    <p>Track commodity price changes over time</p>
+</div>
+
+<div class="trends-controls">
+    <div class="select-container">
+        <label for="commoditySelect">Select Commodity:</label>
+        <select id="commoditySelect" class="form-select">
+            {% for commodity in commodities %}
+            <option value="{{ commodity }}">{{ commodity }}</option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
+
+<div class="trends-container">
+    <div class="chart-container">
+        <canvas id="trendChart"></canvas>
+    </div>
+    
+    <div class="table-container">
+        <h3>Price History</h3>
+        <div class="table-responsive">
+            <table class="data-table" id="trendTable">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Market</th>
+                        <th>Price (₹/kg)</th>
+                    </tr>
+                </thead>
+                <tbody id="trendTableBody">
+                    <!-- Will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const trends = JSON.parse('{{ trends|default([])|tojson|safe }}');
+    let trendChart;
+    
+    function updateTrendDisplay() {
+        const commodity = document.getElementById('commoditySelect').value;
+        const commodityData = trends[commodity] || [];
+        
+        // Update chart
+        const ctx = document.getElementById('trendChart').getContext('2d');
+        
+        if (trendChart) {
+            trendChart.destroy();
+        }
+        
+        trendChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: commodityData.map(item => item.date),
+                datasets: [{
+                    label: `${commodity} Price Trend`,
+                    data: commodityData.map(item => item.price),
+                    borderColor: '#3498db',
+                    backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: `Price Trend for ${commodity}`
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `₹${context.parsed.y.toFixed(2)}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        title: {
+                            display: true,
+                            text: 'Price (₹/kg)'
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return '₹' + value;
+                            }
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Date'
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Update table
+        const tableBody = document.getElementById('trendTableBody');
+        tableBody.innerHTML = '';
+        
+        commodityData.forEach(item => {
+            const row = document.createElement('tr');
+            
+            const dateCell = document.createElement('td');
+            dateCell.textContent = item.date;
+            
+            const marketCell = document.createElement('td');
+            marketCell.textContent = item.market;
+            
+            const priceCell = document.createElement('td');
+            priceCell.textContent = `₹${item.price.toFixed(2)}`;
+            
+            row.appendChild(dateCell);
+            row.appendChild(marketCell);
+            row.appendChild(priceCell);
+            
+            tableBody.appendChild(row);
+        });
+    }
+    
+    // Initialize with first commodity
+    updateTrendDisplay();
+    
+    // Update when commodity selection changes
+    document.getElementById('commoditySelect').addEventListener('change', updateTrendDisplay);
+});
+</script>
+{% endblock %}

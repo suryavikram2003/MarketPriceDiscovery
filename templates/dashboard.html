@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Market Dashboard</h1>
+    <p>Overview of current market prices in Tamil Nadu, Salem</p>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon">
+            <i class="fas fa-shopping-basket"></i>
+        </div>
+        <div class="stat-content">
+            <h3>Total Commodities</h3>
+            <p class="stat-value">{{ stats.commodities_count }}</p>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon">
+            <i class="fas fa-rupee-sign"></i>
+        </div>
+        <div class="stat-content">
+            <h3>Average Price</h3>
+            <p class="stat-value">₹{{ "%.2f"|format(stats.avg_price) }}</p>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon">
+            <i class="fas fa-chart-line"></i>
+        </div>
+        <div class="stat-content">
+            <h3>Price Range</h3>
+            <p class="stat-value">₹{{ "%.2f"|format(stats.min_price) }} - ₹{{ "%.2f"|format(stats.max_price) }}</p>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon">
+            <i class="fas fa-database"></i>
+        </div>
+        <div class="stat-content">
+            <h3>Total Records</h3>
+            <p class="stat-value">{{ stats.total_records }}</p>
+        </div>
+    </div>
+</div>
+
+<div class="chart-container">
+    <h2>Price Trends Overview</h2>
+    <canvas id="priceChart"></canvas>
+</div>
+
+<div class="table-container">
+    <div class="table-header">
+        <h2>Latest Market Prices</h2>
+        <div class="table-actions">
+            <input type="text" id="searchInput" placeholder="Search commodities..." class="search-input">
+            <button class="btn btn-secondary" onclick="exportTableData()">
+                <i class="fas fa-download"></i> Export
+            </button>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="data-table" id="marketTable">
+            <thead>
+                <tr>
+                    <th>Commodity</th>
+                    <th>Market</th>
+                    <th>Price (₹/kg)</th>
+                    <th>Change</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in market_data %}
+                <tr>
+                    <td>{{ item.commodity }}</td>
+                    <td>{{ item.market }}</td>
+                    <td>₹{{ "%.2f"|format(item.price_per_kg) }}</td>
+                    <td class="{{ 'price-up' if item.price_change > 0 else 'price-down' }}">
+                        {{ "%.2f"|format(item.price_change) }}%
+                        {% if item.price_change > 0 %}
+                            <i class="fas fa-arrow-up"></i>
+                        {% else %}
+                            <i class="fas fa-arrow-down"></i>
+                        {% endif %}
+                    </td>
+                    <td>{{ item.date }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="text/javascript">
+document.addEventListener('DOMContentLoaded', function() {
+    // Price chart
+    const ctx = document.getElementById('priceChart').getContext('2d');
+    const marketData = JSON.parse('{{ market_data|default([])|tojson|safe }}');
+
+    
+    // Prepare data for chart
+    const commodities = [...new Set(marketData.map(item => item.commodity))].slice(0, 5);
+    const datasets = commodities.map((commodity, index) => {
+        const commodityData = marketData.filter(item => item.commodity === commodity);
+        const colors = ['#3498db', '#2ecc71', '#e74c3c', '#f39c12', '#9b59b6'];
+        
+        return {
+            label: commodity,
+            data: commodityData.map(item => item.price_per_kg),
+            borderColor: colors[index],
+            tension: 0.4,
+            fill: false
+        };
+    });
+    
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: Array.from({length: datasets[0]?.data.length || 0}, (_, i) => i + 1),
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Price Comparison by Commodity'
+                },
+                legend: {
+                    position: 'top'
+                }
+            }
+        }
+    });
+    
+    // Search functionality
+    document.getElementById('searchInput').addEventListener('keyup', function() {
+        const searchTerm = this.value.toLowerCase();
+        const rows = document.querySelectorAll('#marketTable tbody tr');
+        
+        rows.forEach(row => {
+            const commodity = row.cells[0].textContent.toLowerCase();
+            const market = row.cells[1].textContent.toLowerCase();
+            
+            if (commodity.includes(searchTerm) || market.includes(searchTerm)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    });
+});
+
+function exportTableData() {
+    const table = document.getElementById('marketTable');
+    let csv = [];
+    const rows = table.querySelectorAll('tr');
+    
+    for (let i = 0; i < rows.length; i++) {
+        const row = [], cols = rows[i].querySelectorAll('td, th');
+        
+        for (let j = 0; j < cols.length; j++) {
+            // Clean the text content (remove currency symbols, etc)
+            let text = cols[j].textContent.replace(/₹|%|\n|\r/g, '').trim();
+            row.push('"' + text + '"');
+        }
+        
+        csv.push(row.join(','));
+    }
+    
+    const csvContent = 'data:text/csv;charset=utf-8,' + csv.join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', 'market_data.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}</script>
+</script>
+{% endblock %}
