@@ -110,10 +110,6 @@
         {% if current_user.is_authenticated %}
             <a href="{{ url_for('dashboard') }}" class="btn btn-primary">Go to Dashboard</a>
         {% else %}
-            <div class="cta-buttons">
-                <a href="{{ url_for('login') }}" class="btn btn-primary">Login</a>
-                <a href="{{ url_for('register') }}" class="btn btn-secondary">Register</a>
-            </div>
         {% endif %}
     </div>
 </div>
