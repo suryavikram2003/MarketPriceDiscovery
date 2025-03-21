@@ -20,11 +20,12 @@ app = Flask(__name__)
 CORS(app)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///market.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SECRET_KEY'] = 'your-secret-key'
+app.config['SECRET_KEY'] = '579b464db66ec23bdd000001ae581df7f2744e205d6478735786d3ae'
 
 # Initialize database and login manager
 db = SQLAlchemy(app)
-login_manager = LoginManager(app)
+login_manager = LoginManager()
+login_manager.init_app(app)
 login_manager.login_view = 'login'
 
 # Database Models
@@ -235,19 +236,31 @@ def index():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
+        # Get form data
+        email = request.form.get('email')
         
-        user = User.query.filter_by(username=username).first()
+        # Find user or create a dummy user if not found
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            # Create a dummy user for the session
+            user = User(
+                name="Guest User",
+                email=email,
+                password="dummy_password"  # Not actually used
+            )
+            db.session.add(user)
+            db.session.commit()
         
-        if user and user.password == password:
-            login_user(user)
-            flash('Login successful!', 'success')
-            return redirect(url_for('dashboard'))
+        # Log in the user without password verification
+        login_user(user)
+        flash('Login successful!', 'success')
         
-        flash('Invalid username or password', 'error')
+        # Redirect to dashboard
+        return redirect(url_for('dashboard'))
     
+    # GET request - show login form
     return render_template('login.html')
+
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -274,14 +287,14 @@ def register():
     return render_template('register.html')
 
 @app.route('/logout')
-@login_required
+
 def logout():
     logout_user()
     flash('You have been logged out', 'success')
     return redirect(url_for('login'))
 
 @app.route('/dashboard')
-@login_required
+
 def dashboard():
     try:
         # First check if we have recent data in the database
@@ -344,7 +357,6 @@ def dashboard():
                          current_date=datetime.now().strftime('%Y-%m-%d'))
 
 @app.route('/market-analysis')
-@login_required
 def market_analysis():
     try:
         api = MarketAPI()
@@ -395,7 +407,6 @@ def market_analysis():
                          total_markets=total_markets)
 
 @app.route('/price-trends')
-@login_required
 def price_trends():
     try:
         api = MarketAPI()
@@ -431,7 +442,6 @@ def price_trends():
                          commodities=commodities)
 
 @app.route('/reports')
-@login_required
 def reports():
     try:
         report_type = request.args.get('type', 'daily')
@@ -586,7 +596,6 @@ def get_market_stats():
         }), 500
 
 @app.route('/add-market-data', methods=['GET', 'POST'])
-@login_required
 def add_market_data():
     if request.method == 'POST':
         try:
@@ -608,7 +617,6 @@ def add_market_data():
     return render_template('add_market_data.html')
 
 @app.route('/edit-market-data/<int:id>', methods=['GET', 'POST'])
-@login_required
 def edit_market_data(id):
     data = MarketData.query.get_or_404(id)
     
@@ -626,7 +634,6 @@ def edit_market_data(id):
     return render_template('edit_market_data.html', data=data)
 
 @app.route('/delete-market-data/<int:id>')
-@login_required
 def delete_market_data(id):
     try:
         data = MarketData.query.get_or_404(id)
