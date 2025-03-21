@@ -231,12 +231,11 @@ def cleanup_old_market_data():
 @app.route('/')
 def index():
     return render_template('index.html')
-
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         # Get form data
-        email = request.form.get('email')
+        email = request.form.get('email', 'guest@example.com')
         
         # Find user or create a dummy user if not found
         user = User.query.filter_by(email=email).first()
@@ -248,7 +247,10 @@ def login():
                 password="dummy_password"  # Not actually used
             )
             db.session.add(user)
-            db.session.commit()
+            try:
+                db.session.commit()
+            except:
+                db.session.rollback()
         
         # Log in the user without password verification
         login_user(user)
